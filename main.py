@@ -1,10 +1,12 @@
 import logging
 import threading
+import re
 
 logging.basicConfig(level=logging.DEBUG)
 
 from FunPayCardinal.FunPayAPI import Account, Runner
 from FunPayCardinal.FunPayAPI.updater.events import NewMessageEvent
+from FunPayCardinal.FunPayAPI.common.enums import MessageTypes
 from config import GOLDEN_KEY
 
 acc = Account(GOLDEN_KEY).get() #type: ignore
@@ -19,14 +21,13 @@ print("🚀 Runner запущен. Жду события...")
 for event in runner.listen(requests_delay=4):
     if isinstance(event, NewMessageEvent):
         msg = event.message
-        print("================================")
-        print("Text: ", msg.text)
-        print("Autor: ",msg.author)
-        print("Vse polya: ",vars(msg))
-        print("================================")
 
-        try:
-            print("Заказ: ",msg._order)
-            print("Название заказа: ",vars(msg._order) if msg._order else "Нету заказа")
-        except Exception as e:
-            print("Ошибка при получении заказа", e)
+        if msg.type == MessageTypes.ORDER_PURCHASED and msg.text:
+            match = re.search(r"#([A-Z0-9]+)", msg.text)
+            if match:
+                order_id = match.group(1)
+                print("Number of order: ", order_id)
+
+                order = acc.get_order(order_id)
+                print("Value: ", vars(order))
+            
